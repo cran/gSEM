@@ -8,7 +8,6 @@
 ##' @param round a positive integer. The coefficients are rounded to this decimal place.
 ##' @return A list of the following items: 1) model: the best fitted model, 2) model.print: a character string of the model equation and 3) coefs: Model coefficients vector.
 ##' @export
-##' @author Yifan Xu
 ##' @examples
 ##' ##' ## Load the sample acrylic data set
 ##' data(acrylic)
@@ -87,5 +86,3 @@ path <- function(x, from, to, round = 3){
         invisible(list(model = theModel, model.print = ans.print, coefs = coefs))
     }
 }
-
-

@@ -5,7 +5,7 @@
 \title{Plotting of Principle 2 of Semi-gSEM}
 \usage{
 \method{plot}{sgSEMp2}(x, ..., cutoff = 0.2, width = NULL, height = NULL,
-  filename = NULL)
+  filename = NULL, detail = F)
 }
 \arguments{
 \item{x}{The returned list from sgSEMp2. Plotting uses the first element of this list (print) in which the first column of it is the response, the second column is variable and other columns are corresponding statistical model, r-squared, adj-r-squared, P-value, P-value rank, p1ff, r2mark, and markrank.}
@@ -19,6 +19,8 @@
 \item{height}{A numeric describing the height of the plot output in pixels.}
 
 \item{filename}{A character string naming a file to save as an html file.}
+
+\item{detail}{Logic value indicating whether the detailed information about the full model is displayed. Default is False.}
 }
 \value{
 An html style plot of the pairwise relationship pathway diagram between stressors and responses. Arrows show relationships between each variable with given statistical relations along the connection lines.

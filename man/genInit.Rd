@@ -23,7 +23,4 @@ Currently the non-linearizable function included in sgSEMp1() is y = a + b * exp
 \examples{
 genInit(list(a1 = c(0,2), a2 = c(4,5), a3 = c(-1, -0.5)), k = 20 )
 }
-\author{
-Yifan Xu
-}
 

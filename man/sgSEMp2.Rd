@@ -28,12 +28,25 @@ This function builds an gSEM model using gSEM principle 2. Principle 2 resembles
 Data is analysed first using Principle 1 to find the best models. If needed, transformations based on the best models are applied to the predictors. Starting from the system response variable, each variable is regressed on all other variables except for the system response in an additive multiple regression model, which is reduced by a stepwise selection using stepAIC(). Then, for each selected variable, fitted regression for 6 selected functional forms and pick the best.
 }
 \examples{
+# Using built-in dataset
 data(acrylic)
 ans <- sgSEMp2(acrylic)
 ans$res.print
 plot(ans)
 
-
+\dontrun{
+# Using simulated data
+x4=runif(100,0,2)
+x3=1+2.5*x4+rnorm(100,0,0.5)
+x1=runif(100,1,4)
+x2=-1-x1+x3+rnorm(100,0,0.3)
+y=2+2*exp(x1/3)+(x2-1)^2-x3+rnorm(100,0,0.5)
+# Check the pairwise plot 
+sim=cbind(x4,y,x1,x2,x3)
+pairs(sim)
+ans <- sgSEMp2(as.data.frame(sim))
+plot(ans)
+}
 }
 \seealso{
 sgSEMp1() and plot.sgSEMp2()

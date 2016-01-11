@@ -2,6 +2,7 @@
 ##' @importFrom 'graphics' 'par' 'points' 'legend'
 ##' @importFrom 'stats' 'as.formula' 'predict'
 ##' @importFrom 'grDevices' 'dev.off'
+
 plotAll <- function(x, dirPath = file.path(".", "figs"),
                     figArgs = list(res = 150, units = "in", height = 8, width = 8)){
     dir.create(dirPath)

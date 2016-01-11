@@ -1,5 +1,6 @@
 ## Calculate R^2 and adj R^2 from nls result
 ##' @importFrom 'stats' 'residuals' 'var'
+
 nlsR2 <- function(nlsAns, # return from a nls() call
                   y, # response vector
                   p) # number of parameters

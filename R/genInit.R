@@ -8,10 +8,10 @@
 ##' @export
 ##' @importFrom 'stats' 'runif'
 ##' @return A data frame. Each column corresponds to a coefficient. Each row corresponds to a random initial vector.
-##' @author Yifan Xu
 ##'
 ##' @examples
 ##' genInit(list(a1 = c(0,2), a2 = c(4,5), a3 = c(-1, -0.5)), k = 20 )
+
 genInit <- function(bounds = list(a1 = c(-3, 3),
                         a2 = c(-3, 3),
                         a3 = c(-3, 3)),

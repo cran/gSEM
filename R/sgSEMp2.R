@@ -19,12 +19,26 @@
 ##' @export
 ##' @importFrom 'stats' 'coef'
 ##' @examples
+##' # Using built-in dataset
 ##' data(acrylic)
 ##' ans <- sgSEMp2(acrylic)
 ##' ans$res.print
 ##' plot(ans)
 ##' 
-##'
+##' \dontrun{
+##' # Using simulated data
+##' x4=runif(100,0,2)
+##' x3=1+2.5*x4+rnorm(100,0,0.5)
+##' x1=runif(100,1,4)
+##' x2=-1-x1+x3+rnorm(100,0,0.3)
+##' y=2+2*exp(x1/3)+(x2-1)^2-x3+rnorm(100,0,0.5)
+##' # Check the pairwise plot 
+##' sim=cbind(x4,y,x1,x2,x3)
+##' pairs(sim)
+##' ans <- sgSEMp2(as.data.frame(sim))
+##' plot(ans)
+##' }
+
 sgSEMp2 <- function(x, predictor = NULL, response = NULL){
   
 	if(!missing(predictor)){
@@ -68,13 +82,13 @@ sgSEMp2 <- function(x, predictor = NULL, response = NULL){
 	###############################
 	## The following function does multiple selection
 	############################### 
-	Multiple.relation <- function(iResp){
+	Multiple.relation <- function(Mx){
 
-		Resp <- colnames(x)[iResp]   
-		Var <- colnames(x)[c(-2, -iResp)]
-
+		status_ind <- status_matrix[i_status,]
+		Resp <- colnames(Mx)[which(status_ind==1)]   
+		Var <- colnames(Mx)[which(status_ind==0)]
 		## get rid of NA's
-		x1 <- x[c(Resp,Var)]
+		x1 <- Mx[c(Resp,Var)]
 		x1 <- x1[apply(x1, 1, FUN = function(x) sum(is.na(x)) == 0),]
 		
 		################## START: APPLY TRANSFORMATION TO PREDICTORS ###################
@@ -96,7 +110,6 @@ sgSEMp2 <- function(x, predictor = NULL, response = NULL){
 			# If "SQuad", x ---> x^2
 			if ( p1.bestModels[Var[i],Resp] == "SQuad" ) {
 				x1[,Var[i]] <- (x1[,Var[i]])^2
-				trans1[i] <- paste(Var[i],"_t=", Var[i],"^2",sep="")
 				names(trans1)[i] <- Var[i]
 				names(x1)[i+1] <- paste(names(x1)[i+1],"_t",sep="")
 				Quad_value <- coef(p1.allModels[Var[i],Resp,'SQuad'][[1]])
@@ -139,24 +152,18 @@ sgSEMp2 <- function(x, predictor = NULL, response = NULL){
 				names(x1)[ncol(x1)] <- paste(Var[i],"__2",sep="")
 			
 				Quad_value <- coef(p1.allModels[Var[i],Resp,'Quad'][[1]])
-#				x1[,Var[i]] <- (x1[,Var[i]]+Quad_value[2]/(2*Quad_value[3]))^2
 				names(trans1)[i] <- Var[i]
-#				names(x1)[i+1] <- paste(names(x1)[i+1],"_t",sep="")
 				if ( (Quad_value[2]>0)&(Quad_value[3]>0) ) {
 					trans[i] <- paste(Resp,"=",format(Quad_value[1],scitific=T,digits=2),"+",format(Quad_value[2],scitific=T,digits=2),'*',Var[i],'+',format(Quad_value[3],scitific=T,digits=2),'*',Var[i],"^2",sep="")
-					trans1[i] <- paste(Var[i],"_t=$", Var[i],"+",format(Quad_value[2]/(2*Quad_value[3]),scitific=T,digits=2),"$^2",sep="")
 				}
 				if ( (Quad_value[2]>0)&(Quad_value[3]<0) ) {
 					trans[i] <- paste(Resp,"=",format(Quad_value[1],scitific=T,digits=2),"+",format(Quad_value[2],scitific=T,digits=2),'*',Var[i],format(Quad_value[3],scitific=T,digits=2),'*',Var[i],"^2",sep="")
-					trans1[i] <- paste(Var[i],"_t=$", Var[i],"",format(Quad_value[2]/(2*Quad_value[3]),scitific=T,digits=2),"$^2",sep="")
 				}
 				if ( (Quad_value[2]<0)&(Quad_value[3]>0) ) {
 					trans[i] <- paste(Resp,"=",format(Quad_value[1],scitific=T,digits=2),format(Quad_value[2],scitific=T,digits=2),'*',Var[i],'+',format(Quad_value[3],scitific=T,digits=2),'*',Var[i],"^2",sep="")
-					trans1[i] <- paste(Var[i],"_t=$", Var[i],"",format(Quad_value[2]/(2*Quad_value[3]),scitific=T,digits=2),"$^2",sep="")
 				}
 				if ( (Quad_value[2]<0)&(Quad_value[3]<0) ) {
 					trans[i] <- paste(Resp,"=",format(Quad_value[1],scitific=T,digits=2),format(Quad_value[2],scitific=T,digits=2),'*',Var[i],format(Quad_value[3],scitific=T,digits=2),'*',Var[i],"^2",sep="")
-					trans1[i] <- paste(Var[i],"_t=$", Var[i],"+",format(Quad_value[2]/(2*Quad_value[3]),scitific=T,digits=2),"$^2",sep="")
 				}
 			}
 			# If "nls", x ---> exp(cx)
@@ -181,21 +188,7 @@ sgSEMp2 <- function(x, predictor = NULL, response = NULL){
 		lm.best <- stepAIC(lm.full.model, direction = "backward", trace =FALSE)
 		R2 <- summary(lm.best)$r.squared
 		adj.R2 <- summary(lm.best)$adj.r.squared
-
-		Var.relate <- names(coef(lm.best))[-1] 
-		for ( m in 1:length(Var.relate) ) {
-			Var.relate[m] <- gsub("_t","",Var.relate[m])
-		}
-		
 		best.vars <- names(coef(lm.best))[-1] 
-		for ( m in 1:length(best.vars) ) {
-			best.vars[m] <- gsub("_t","",best.vars[m])
-		}
-				
-		Var.relate1 <- subset(Var.relate, Var.relate != colnames(x)[1]) ## remove the predictor
-#		tofit.flag[Var.relate1] <<- TRUE        ############## <<
-#		fitted.flag[iResp-1] <<- TRUE       ############### <<
-#        best.vars <- best.vars[-grep("__2",best.vars)]
 		
 		coeff_number <- format(lm.best$coeff,digits=2)
 		names(coeff_number) <- NULL
@@ -240,70 +233,98 @@ sgSEMp2 <- function(x, predictor = NULL, response = NULL){
 		}
 		
 		# Make a new row in the Res.print table for each of the predictor variables in the additive model
-		
+		Res.print.local <- matrix(NA, nrow = 1, ncol = nRes)
+		colnames(Res.print.local) <- c("resp",          "var",          "ar2",      "Tran",     "GModel", 
+	                                   "Gpvalue",       "GR2aR2",       "IModel",   "Ipvalue",  "IR2aR2",
+							           "Rank",          "Gcoeff",       "GModelB" )
 		for (n in 1:length(best.vars)){
-			if (length(grep("__2",best.vars[n]))==0) {
-				Res.print.newrow <- matrix(NA, nrow = 1, ncol = nRes)
-				Res.print.newrow <- as.data.frame(Res.print.newrow)
-				colnames(Res.print.newrow) <- c("resp",          "var",          "adj-r2",      "Transformation",  "Group_Model", 
-	                         "Group_p-value", "Group_R2_aR2", "Indv_Model",  "Indv_p-value",     "Indv_R2_aR2",
-							 "Rank")
-				# This fills the table with blanks for now while the real values are obtained
-				# Need to break this into individual cell assignments to prevent factorization from combining datatypes
-				Res.print.newrow[1,1] <- Resp
-				Res.print.newrow[1,2]<- best.vars[n]
-#			Res.print.newrow[1,3] <- as.character(lm.best$call[2])
-				Res.print.newrow[1,5] <- lm.best.text
-				Res.print.newrow[1,4] <- trans1[best.vars[n]]
-				Res.print.newrow[1,6] <- paste(round(summary(lm.best)$coeff[,4],digits=3),collapse="  ")
-				Res.print.newrow[1,7] <- paste(round(R2,digits=3),round(adj.R2,digits=3),sep="  ")
-				Res.print.newrow[1,3] <- format(adj.R2,scitific=T,digits=2)
-				Res.print.newrow[1,11] <- which(order(summary(lm.best)$coeff[-1,4])==n)
-				Res.print.newrow[1,8] <- trans[best.vars[n]]
-				Individual_summary <- summary(p1.allModels[best.vars[n],Resp,p1.bestModels[best.vars[n],Resp]][[1]])
-				Res.print.newrow[1,9] <- paste(round(Individual_summary$coeff[,4],digits=3),collapse="  ")
-				if (p1.bestModels[best.vars[n],Resp]!="nls") {
-					Res.print.newrow[1,10] <- paste(round(Individual_summary$r.squared,digits=3),round(Individual_summary$adj.r.squared,digits=3),sep="  ")
+			Res.print.newrow <- matrix(NA, nrow = 1, ncol = nRes)
+			Res.print.newrow <- as.data.frame(Res.print.newrow)
+			colnames(Res.print.newrow) <- c("resp",          "var",          "ar2",      "Tran",     "GModel", 
+	                                        "Gpvalue",       "GR2aR2",       "IModel",   "Ipvalue",  "IR2aR2",
+							                "Rank",          "Gcoeff",       "GModelB" )
+			Res.print.newrow[1,1] <- Resp
+			Res.print.newrow[1,3] <- format(adj.R2,scitific=T,digits=2)		
+			Res.print.newrow[1,6] <- paste(round(summary(lm.best)$coeff[,4],digits=3),collapse="  ")		
+			Res.print.newrow[1,7] <- paste(round(R2,digits=3),round(adj.R2,digits=3),sep="  ")			
+			Res.print.newrow[1,12] <- paste(format(lm.best$coeff,digits=2),collapse=" ")
+			best.vars.rep <- best.vars
+			for (iitemp in 1:length(best.vars)) {
+				if (regexpr("_t",best.vars[iitemp])!=-1) {
+					temp_str <- trans1[substr(best.vars[iitemp],1,regexpr("_t",best.vars[iitemp])-1)]
+					best.vars.rep[iitemp] <- substr(temp_str,regexpr("=",temp_str)+1,nchar(temp_str))
 				}
-				Res.print <<- rbind(Res.print, Res.print.newrow)
-			} else {
-			    new_string <- substr(best.vars[n],1,regexpr("__",best.vars[n])[1]-1)
-				Res.print.newrow <- matrix(NA, nrow = 1, ncol = nRes)
-				Res.print.newrow <- as.data.frame(Res.print.newrow)
-				colnames(Res.print.newrow) <- c("resp",          "var",          "adj-r2",      "Transformation",  "Group_Model", 
-	                         "Group_p-value", "Group_R2_aR2", "Indv_Model",  "Indv_p-value",     "Indv_R2_aR2",
-							 "Rank")
-				# This fills the table with blanks for now while the real values are obtained
-				# Need to break this into individual cell assignments to prevent factorization from combining datatypes
-				Res.print.newrow[1,1] <- Resp
-				Res.print.newrow[1,2]<- new_string
-#			Res.print.newrow[1,3] <- as.character(lm.best$call[2])
+			}
+			Res.print.newrow[1,13] <- paste(Resp,"=",gsub("__2","^2",paste(best.vars.rep,collapse="+")),sep="")
+			if ((length(grep("__2",best.vars[n]))==0)&(length(grep("_t",best.vars[n]))==0)) {
+				Res.print.newrow[1,2]<- best.vars[n]
 				Res.print.newrow[1,5] <- lm.best.text
-				Res.print.newrow[1,4] <- trans1[new_string]
-				Res.print.newrow[1,6] <- paste(round(summary(lm.best)$coeff[,4],digits=3),collapse="  ")
-				Res.print.newrow[1,7] <- paste(round(R2,digits=3),round(adj.R2,digits=3),sep="  ")
-				Res.print.newrow[1,3] <- format(adj.R2,scitific=T,digits=2)
+				Res.print.newrow[1,8] <- trans[best.vars[n]]
+				if (p1.bestModels[best.vars[n],Resp]!='-1') {
+					Individual_summary <- summary(p1.allModels[best.vars[n],Resp,p1.bestModels[best.vars[n],Resp]][[1]])
+					Res.print.newrow[1,9] <- paste(round(Individual_summary$coeff[,4],digits=3),collapse="  ")
+					if (p1.bestModels[best.vars[n],Resp]!="nls") {
+						Res.print.newrow[1,10] <- paste(round(Individual_summary$r.squared,digits=3),round(Individual_summary$adj.r.squared,digits=3),sep="  ")
+					}
+				}
 				Res.print.newrow[1,11] <- which(order(summary(lm.best)$coeff[-1,4])==n)
+				Res.print <<- rbind(Res.print, Res.print.newrow)
+				Res.print.local <- rbind(Res.print.local,Res.print.newrow)
+			} else {
+				if (length(grep("_t",best.vars[n]))!=0) {
+					new_string <- substr(best.vars[n],1,regexpr("_t",best.vars[n])[1]-1)
+				} else {
+					new_string <- substr(best.vars[n],1,regexpr("__2",best.vars[n])[1]-1)
+				}
+				Res.print.newrow[1,2]<- new_string
+				Res.print.newrow[1,5] <- lm.best.text
 				Res.print.newrow[1,8] <- trans[new_string]
 				Individual_summary <- summary(p1.allModels[new_string,Resp,p1.bestModels[new_string,Resp]][[1]])
 				Res.print.newrow[1,9] <- paste(round(Individual_summary$coeff[,4],digits=3),collapse="  ")
 				if (p1.bestModels[new_string,Resp]!="nls") {
 					Res.print.newrow[1,10] <- paste(round(Individual_summary$r.squared,digits=3),round(Individual_summary$adj.r.squared,digits=3),sep="  ")
 				}
+				Res.print.newrow[1,11] <- which(order(summary(lm.best)$coeff[-1,4])==n)
 				insert_ind <- 0
 				Res.temp <- Res.print[-1,]
-				for ( mm in 1:nrow(Res.temp) ) {
-					if ( Res.temp[mm,1]==Resp ) {
-						if ( Res.temp[mm,2]==new_string ) {
-							insert_ind <- 1
+				if (nrow(Res.temp)>0) {
+					for ( mm in 1:nrow(Res.temp) ) {
+						if ( Res.temp[mm,1]==Resp ) {
+							if ( Res.temp[mm,2]==new_string ) {
+								insert_ind <- 1
+							}
 						}
 					}
 				}
 				if (insert_ind==0) {
 					Res.print <<- rbind(Res.print, Res.print.newrow)
+					Res.print.local <- rbind(Res.print.local,Res.print.newrow)
 				}
 			}	
 		}
+		sig_var <- Res.print.local[-1,2]
+		status_matrix[i_status,Resp] <<- 2
+		status_matrix0 <- matrix(NA,nrow=1,ncol=dim(status_matrix)[2])
+		colnames(status_matrix0) <- colnames(status_matrix)
+		for ( sig_ind in 1:length(sig_var) ) {
+			if ( (sig_var[sig_ind]!=colnames(status_matrix)[1])&(max(status_matrix[,sig_var[sig_ind]])==0) ) {
+				status_temp <- matrix(NA,nrow=1,ncol=dim(status_matrix)[2])
+				colnames(status_temp) <- colnames(status_matrix)
+				status_temp[1,] <- status_matrix[i_status,]
+				status_temp[1,sig_var[sig_ind]] <- 1
+				new_sig <- sig_var[-sig_ind]
+				if (length(new_sig)!=0) {
+					for ( i_new in 1:length(new_sig) ) {
+						if (max(status_matrix[,new_sig[i_new]])!=0) {
+							status_temp[1,new_sig[i_new]] <- 2
+						}
+					}
+				}
+				status_temp[1,1] <- 0
+				status_matrix0 <- rbind(status_matrix0,status_temp)
+			}
+		}
+		status_matrix <<- rbind(status_matrix,status_matrix0[-1,])
 	}
 	
 	###############################
@@ -356,35 +377,26 @@ sgSEMp2 <- function(x, predictor = NULL, response = NULL){
 	temp <- cbind(rep(NA,length(rownames(temp))),temp)
 	p1.allModels[,,"nls"] <- temp
 
-#	temp <- rbind(p1.result$allModels[1,,"CPSLSL"],rep(NA,length(colnames(p1.result$allModels[,,"CPSLSL"]))),p1.result$allModels[-1,,"CPSLSL"])
-#	temp <- cbind(rep(NA,length(rownames(temp))),temp)
-#	p1.allModels[,,"CPSLSL"] <- temp
-
 	rownames(p1.allModels) <- colnames(p1.bestModels)
 	# End apply principle 1
   
-	nVar <- ncol(x) #total number of variables
-	nRVar <- nVar - 1 #total number of possible response variables
+	nVar <- ncol(x)    #total number of variables
+	nRVar <- nVar - 1  #total number of possible response variables
   
-#	fitted.flag <- rep(FALSE, nRVar)       #indicator of response variables have been tested, dim2 response
-#	names(fitted.flag) <- colnames(x)[-1]
-#	tofit.flag <- c(TRUE, rep(FALSE, nRVar-1)) #indicator of all reponse varibals need to be tested, dim2 response
-#	names(tofit.flag) <- colnames(x)[-1]
-
-	nRes <- 11 # Number of cells in print variable; see below
-	Res.print <- matrix(NA, nrow = 1, ncol = nRes) 
-#	colnames(Res.print) <- c("resp",	      "var",	  "Group_Model", 	"Transformation",	"Group_p-value",
-#							 "Group_R2_aR2",  "Rank",     "Indv_Model",     "Indv_p-value",     "Indv_R2_aR2",
-#                            "adj-r2")
-	colnames(Res.print) <- c("resp",          "var",          "adj-r2",      "Transformation",  "Group_Model", 
-	                         "Group_p-value", "Group_R2_aR2", "Indv_Model",  "Indv_p-value",     "Indv_R2_aR2",
-							 "Rank")
-
-#	while(sum(tofit.flag - fitted.flag) != 0){   
-#		iResp <- which(tofit.flag != fitted.flag)[1] + 1
-	for ( iResp in 2:ncol(x) ) {
-		Multiple.relation(iResp)
+	nRes <- 13  # Number of cells in print variable; see below
+	Res.print <- matrix(NA, nrow = 1, ncol = nRes)
+	colnames(Res.print) <- c("resp",          "var",          "ar2",      "Tran",     "GModel", 
+	                         "Gpvalue",       "GR2aR2",       "IModel",   "Ipvalue",  "IR2aR2",
+							 "Rank",          "Gcoeff",       "GModelB" )
+	status_matrix <- matrix(0, nrow=1, ncol=ncol(x))
+	colnames(status_matrix) <- colnames(x)
+	status_matrix[1,2] <- 1
+	i_status <- 1
+	while (i_status<=nrow(status_matrix)) {
+		Multiple.relation(x)
+		i_status <- i_status + 1
 	}
+
 	Res.print <- Res.print[-1,]
 	res <- list(res.print = Res.print) #outputs are three tables
 	class(res) <- c("sgSEMp2","list")

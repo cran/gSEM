@@ -35,7 +35,4 @@ ans <- sgSEMp1(acrylic, predictor = "IrradTot", response = "YI")
 cf <- path(ans, from = "IrradTot", to = "IAD2")
 print(cf)
 }
-\author{
-Yifan Xu
-}
 
